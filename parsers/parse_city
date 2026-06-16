@@ -1,0 +1,38 @@
+def parse_city(val):
+    if(
+        pd.isnull(val)
+        or str(val).strip() == ""
+        or str(val).lower() in ["nan","null","unknown","<na>"]
+    ):
+        return pd.NA
+    val = str(val).strip().lower()
+    val = val.replace(",","")
+    return val.title()
+
+def clean_city(df,original_df):
+ 
+    df["city_clean"] = df["city"].apply(parse_city)
+    unparsed_city = df["city_clean"].apply(lambda x:isinstance(x,str) and x is not pd.NA)
+
+    failed_indexes = df[unparsed_city].index.tolist()
+
+    if failed_indexes:
+        os.makedirs(QUARANTINE_DIR,exist_ok=True)
+        quarantine_rows = original_df.loc[failed_indexes].copy()
+
+        quarantine_path = os.path.join(
+            QUARANTINE_DIR,
+            f"quarantine_date_{pd.Timestamp.now().strftime('%d-%m-%y')}.csv"
+        )
+        quarantine_rows.to_csv(quarantine_path,index = True)
+        
+        clean_df = df.drop(index=failed_indexes).copy()
+    else:
+        clean_df = df.copy()
+
+
+    clean_df = clean_df.drop(columns = ["city"])
+    clean_df = clean_df.rename(columns={"city_clean":"city"})
+    clean_df["city"] = pd.to_datetime(clean_df["city"], errors = "coerce")
+    return  clean_df,failed_indexes
+   

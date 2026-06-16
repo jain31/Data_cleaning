@@ -1,0 +1,39 @@
+def parse_payment_method(val):
+    if pd.isnull(val) or str(val).strip().lower() in ["nan","null"]:
+        return pd.NA
+    val = str(val).strip()
+    if val.lower() in ["duplicate"]:
+        return pd.NA
+    if val.lower() in ["upi","cod","wallet","debit card","credit card"," net anking"]:
+        if val.lower() in ["upi","cod"]:
+            return val.upper()
+        else:
+            return val.title()
+    return val
+
+def clean_payment_method(df,original_df):
+ 
+    df["payment_method_clean"] = df['payment_method'].apply(parse_payment_method)
+    unparsed_payment_method = df["payment_method_clean"].apply(lambda x: isinstance(x,str))
+    failed_indexes = df[unparsed_payment_method].index.tolist()
+
+    if failed_indexes:
+        os.makedirs(QUARANTINE_DIR,exist_ok=True)
+        quarantine_rows = original_df.loc[failed_indexes].copy()
+
+        quarantine_path = os.path.join(
+            QUARANTINE_DIR,
+            f"quarantine_date_{pd.Timestamp.now().strftime('%d-%m-%y')}.csv"
+        )
+        quarantine_rows.to_csv(quarantine_path,index = True)
+        
+        clean_df = df.drop(index=failed_indexes).copy()
+    else:
+        clean_df = df.copy()
+
+
+    clean_df = clean_df.drop(columns = ["payment_method"])
+    clean_df = clean_df.rename(columns={"payment_method_clean":"payment_method"})
+    clean_df["payment_method"] = pd.to_datetime(clean_df["payment_method"], errors = "coerce")
+    return  clean_df,failed_indexes
+    

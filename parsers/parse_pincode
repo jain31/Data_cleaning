@@ -1,0 +1,40 @@
+def parse_pincode(val):
+    if pd.isnull(val) or str(val).strip() == "":
+        return pd.NA
+    val = str(val).strip()
+    val = val.replace("_dup","")
+    if str(val).lower() == "duplicate":
+        return pd.NA
+    try:
+        return int(val)
+    except ValueError:
+        return val
+    
+def clean_pincode(df,original_df):
+ 
+    df['pincode_clean'] = df['pincode'].apply(parse_pincode)
+    unparsed_pincode = df['pincode_clean'].apply(lambda x: isinstance(x, str))
+
+    failed_indexes = df[unparsed_pincode].index.tolist()
+
+    if failed_indexes:
+        os.makedirs(QUARANTINE_DIR,exist_ok=True)
+        quarantine_rows = original_df.loc[failed_indexes].copy()
+
+        quarantine_path = os.path.join(
+            QUARANTINE_DIR,
+            f"quarantine_date_{pd.Timestamp.now().strftime('%d-%m-%y')}.csv"
+        )
+        quarantine_rows.to_csv(quarantine_path,index = True)
+        
+        clean_df = df.drop(index=failed_indexes).copy()
+    else:
+        clean_df = df.copy()
+
+
+    clean_df = clean_df.drop(columns = ["pincode"])
+    clean_df = clean_df.rename(columns={"pincode_clean":"pincode"})
+    clean_df["pincode"] = pd.to_datetime(clean_df["pincode"], errors = "coerce")
+    return  clean_df,failed_indexes
+    
+    

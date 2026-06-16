@@ -1,0 +1,37 @@
+def parse_total_amount(val):
+    if pd.isnull(val) or str(val).strip()=="":
+        return pd.NA
+    val = str(val).strip()
+    val = val.replace("Rs","").replace("$","").replace("-","")
+    val = val.replace(",","").strip()
+    try:
+        return float(val)
+    except ValueError:
+        return val
+    
+def clean_total_amount(df,original_df):
+ 
+    df['total_amount_clean'] = df['total_amount'].apply(parse_total_amount)
+    unparsed_total = df['total_amount_clean'].apply(lambda x: isinstance(x, str))  
+
+    failed_indexes = df[unparsed_total].index.tolist()
+
+    if failed_indexes:
+        os.makedirs(QUARANTINE_DIR,exist_ok=True)
+        quarantine_rows = original_df.loc[failed_indexes].copy()
+
+        quarantine_path = os.path.join(
+            QUARANTINE_DIR,
+            f"quarantine_date_{pd.Timestamp.now().strftime('%d-%m-%y')}.csv"
+        )
+        quarantine_rows.to_csv(quarantine_path,index = True)
+        
+        clean_df = df.drop(index=failed_indexes).copy()
+    else:
+        clean_df = df.copy()
+
+
+    clean_df = clean_df.drop(columns = ["total_amount"])
+    clean_df = clean_df.rename(columns={"total_amount_clean":"total_amount"})
+    clean_df["total_amount"] = pd.to_datetime(clean_df["total_amount"], errors = "coerce")
+    return  clean_df,failed_indexes

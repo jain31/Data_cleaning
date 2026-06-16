@@ -1,0 +1,39 @@
+def parse_quantity(val):
+    if pd.isnull(val) or str(val).strip() == "":
+        return pd.NA
+    val = str(val).strip()
+    if str(val).lower() == "nan":
+        return pd.NA
+    try:
+        n_val = float(val)
+        return float(abs(n_val))
+    except ValueError:
+        return val
+
+def clean_quantity(df,original_df):
+ 
+    df['quantity_clean'] = df['quantity'].apply(parse_quantity)
+    unparsed_quantity = df['quantity_clean'].apply(lambda x: isinstance(x, str))
+
+    failed_indexes = df[unparsed_quantity].index.tolist()
+
+    if failed_indexes:
+        os.makedirs(QUARANTINE_DIR,exist_ok=True)
+        quarantine_rows = original_df.loc[failed_indexes].copy()
+
+        quarantine_path = os.path.join(
+            QUARANTINE_DIR,
+            f"quarantine_date_{pd.Timestamp.now().strftime('%d-%m-%y')}.csv"
+        )
+        quarantine_rows.to_csv(quarantine_path,index = True)
+        
+        clean_df = df.drop(index=failed_indexes).copy()
+    else:
+        clean_df = df.copy()
+
+
+    clean_df = clean_df.drop(columns = ["quantity"])
+    clean_df = clean_df.rename(columns={"quantity_clean":"quantity"})
+    clean_df["quantity"] = pd.to_datetime(clean_df["quantity"], errors = "coerce")
+    return  clean_df,failed_indexes
+    
