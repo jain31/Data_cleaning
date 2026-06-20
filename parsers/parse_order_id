@@ -1,0 +1,54 @@
+import re
+import pandas as pd
+import os
+
+valid_order_pattern = re.compile(r'^ORD_\d{4}$')
+numeric_only_order_pattern = re.compile(r'^\d+$')        
+  
+
+def _parse_order_id(val):
+    
+    if (
+        pd.isnull(val)
+        or str(val).strip() == ""
+        or str(val).lower() in ["nan", "null", "n/a", "<na>"]
+    ):
+        return pd.NA
+    val = str(val).strip().lower()
+    if valid_order_pattern.match(val):
+        return val.upper()  
+    if numeric_only_order_pattern.match(val):
+        padded_digits = val.zfill(4)
+        return f"ORD_{padded_digits}"  
+    if val.startswith("ord_"):
+        digits = val.replace("ord_", "")
+        if digits.isdigit():
+            return f"ORD_{digits.zfill(4)}"
+
+
+def clean_order_id(df,original_df):
+ 
+    df['order_id_clean'] = df['order_id'].apply(_parse_order_id)
+    unparsed_total = df['order_id_clean'].apply(lambda x: not isinstance(x, str))
+
+    failed_indexes = df[unparsed_total].index.tolist()
+
+    if failed_indexes:
+        os.makedirs(QUARANTINE_DIR,exist_ok=True)
+        quarantine_rows = original_df.loc[failed_indexes].copy()
+
+        quarantine_path = os.path.join(
+            QUARANTINE_DIR,
+            f"quarantine_date_{pd.Timestamp.now().strftime('%d-%m-%y')}.csv"
+        )
+        quarantine_rows.to_csv(quarantine_path,index = True)
+        
+        clean_df = df.drop(index=failed_indexes).copy()
+    else:
+        clean_df = df.copy()
+
+
+    clean_df = clean_df.drop(columns = ["order_id"])
+    clean_df = clean_df.rename(columns={"order_id_clean":"order_id"})
+    clean_df["order_id"] = pd.to_datetime(clean_df["order_id"], errors = "coerce")
+    return  clean_df,failed_indexes

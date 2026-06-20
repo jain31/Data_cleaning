@@ -1,0 +1,59 @@
+import re
+import pandas as pd
+import os
+
+valid_pattern = re.compile(r'^CUST_\d{4}$')
+numeric_only_pattern = re.compile(r'^\d+$')        
+underscore_digit_pattern = re.compile(r'^_\d+$')
+cust_no_digits_pattern = re.compile(r'^cust_$')     
+def _parse_customer_id(val):
+    if (
+        pd.isnull(val)
+        or str(val).strip() == ""
+        or str(val).lower() in ["nan", "null", "n/a", "<na>"]
+    ):
+        return pd.NA
+    val = str(val).strip().lower()
+    if valid_pattern.match(val):
+        return val.upper()  
+    if numeric_only_pattern.match(val):
+        padded_digits = val.zfill(4)
+        return f"CUST_{padded_digits}"
+    if underscore_digit_pattern.match(val):
+        digits = val.split('_')[1]
+        padded_digits = digits.zfill(4)
+        return f"CUST_{padded_digits}"
+    if cust_no_digits_pattern.match(val):
+        return pd.NA    
+    if val.startswith("cust_"):
+        digits = val.replace("cust_", "")
+        if digits.isdigit():
+            return f"CUST_{digits.zfill(4)}"
+    return pd.NA
+
+def clean_customer_id(df,original_df):
+ 
+    df['customer_id_clean'] = df['customer_id'].apply(_parse_customer_id)
+    unparsed_total = df['customer_id_clean'].apply(lambda x: not isinstance(x, str))
+
+    failed_indexes = df[unparsed_total].index.tolist()
+
+    if failed_indexes:
+        os.makedirs(QUARANTINE_DIR,exist_ok=True)
+        quarantine_rows = original_df.loc[failed_indexes].copy()
+
+        quarantine_path = os.path.join(
+            QUARANTINE_DIR,
+            f"quarantine_date_{pd.Timestamp.now().strftime('%d-%m-%y')}.csv"
+        )
+        quarantine_rows.to_csv(quarantine_path,index = True)
+        
+        clean_df = df.drop(index=failed_indexes).copy()
+    else:
+        clean_df = df.copy()
+
+
+    clean_df = clean_df.drop(columns = ["customer_id"])
+    clean_df = clean_df.rename(columns={"customer_id_clean":"customer_id"})
+    clean_df["customer_id"] = pd.to_datetime(clean_df["customer_id"], errors = "coerce")
+    return  clean_df,failed_indexes
