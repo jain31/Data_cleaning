@@ -1,3 +1,8 @@
+import pandas as pd
+from pathlib import Path
+import os
+QUARANTINE_DIR = os.path.join("quarantine","quarntine_date")
+
 def parse_total_amount(val):
     if pd.isnull(val) or str(val).strip()=="":
         return pd.NA

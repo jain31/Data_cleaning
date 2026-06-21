@@ -1,6 +1,8 @@
 import re
 import pandas as pd
+from pathlib import Path
 import os
+QUARANTINE_DIR = os.path.join("quarantine","quarntine_date")
 
 valid_order_pattern = re.compile(r'^ORD_\d{4}$')
 numeric_only_order_pattern = re.compile(r'^\d+$')        

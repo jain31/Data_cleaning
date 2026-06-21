@@ -1,11 +1,13 @@
 import re
 import pandas as pd
 import os
+QUARANTINE_DIR = os.path.join("quarantine","quarntine_date")
 
 valid_pattern = re.compile(r'^CUST_\d{4}$')
 numeric_only_pattern = re.compile(r'^\d+$')        
 underscore_digit_pattern = re.compile(r'^_\d+$')
-cust_no_digits_pattern = re.compile(r'^cust_$')     
+cust_no_digits_pattern = re.compile(r'^cust_$')
+
 def _parse_customer_id(val):
     if (
         pd.isnull(val)
