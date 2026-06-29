@@ -6,7 +6,7 @@ import pandas as pd
 QUARANTINE_DIR = os.path.join("quarantine", "quarantine_date")
 ist_offset = pd.Timedelta(hours=5, minutes=30)
 logger = get_logger()
-
+logger.info("Ingestion process started successfully!")
 
 def _parse_order_date(val):
     date_formats = [
@@ -85,4 +85,9 @@ def clean_date(df, original_df):
 
     return clean_df, failed_indexes
 
-print("hello")
+import logging
+import multiprocessing
+
+logger = multiprocessing.get_logger()
+logger.setLevel(logging.INFO)
+multiprocessing.log_to_stderr()  # This forces logs to print to your terminal

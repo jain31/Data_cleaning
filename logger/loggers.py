@@ -1,9 +1,10 @@
 from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
-
 import os
-log_dir = os.path.join("logging","logging_ingestion")
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+log_dir = os.path.join(CURRENT_DIR, "logs")
+#log_dir = os.path.join("logging","logging_ingestion")
 def get_logger():
     os.makedirs(log_dir,exist_ok = True)
     log_file = os.path.join(log_dir,"ingestion_log.log")
