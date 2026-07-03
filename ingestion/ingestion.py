@@ -83,41 +83,24 @@ def _validate_columns(df:pd.DataFrame,column_alias:dict)->dict:
             "missing cols":missing_cols,
             "extra cols":extra_cols
         }
-    
-    else: 
-        print(f"validation passed schema matches perfectly")
-        
-        return {
-            "status":"success",
-            "reason":"perfect match"
-        }
-
+    log.info(f"action=validate_columns | status=success | columns={target_count}")
+    return {"status": "success", "reason":"perfect_match"}            
  
 # ──────────────────────────────────────────────
 # STEP 3 — file-level duplicate check via hash
 # ──────────────────────────────────────────────
  
 def _compute_file_hash(file_path: Path) -> str:
-    """
-    Computes SHA256 hash of the raw file bytes.
-    This is a file-level check only -- it catches an exact resend of the
-    same file. It will NOT catch the same data re-exported with different
-    formatting (different row order, line endings etc.). That is handled
-    separately at the row level in step 4.
-    """
     sha256 = hashlib.sha256()
     with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
             sha256.update(chunk)
-    return sha256.hexdigest()
+    file_hash = sha256.hexdigest
+    log.debug(f"action=compute_file_hash | file ={file_path.name} | hash={file_hash{:12}}...")
+    return file_hash
  
  
-def _check_file_duplicate(conn, raw_content_hash: str) -> tuple:
-    """
-    Checks bronze_raw table for a previously successful file with the
-    same hash.
-    Returns (is_duplicate: bool, original_file_uuid: str or None).
-    """
+def _check_file_duplicate(conn, raw_content_hash: str) -> tuple
     sql = """
         SELECT file_uuid FROM bronze_raw
         WHERE raw_content_hash = %s
@@ -256,3 +239,25 @@ def process_file(file_path: Path, column_alias: dict, conn) -> pd.DataFrame | No
 
 
 print(ROOT_DIR)
+
+
+
+
+# def _check_file_duplicate(conn, etag_data: str) -> tuple
+#     sql = """
+#         SELECT file_uuid FROM bronze_raw
+#         WHERE etag_data = %s
+#           AND is_duplicate = 0
+#           AND bronze_status = 'success'
+#         LIMIT 1
+#     """
+#     with conn.cursor() as cur:
+#         cur.execute(sql, (etag_data,))
+#         row = cur.fetchone()
+ 
+#     if row:
+#       log.warning = (f"action=check_file_duplicate | status=duplicate | matches_uuid={row[0]}")
+#       return True, row[0]
+# log.info("action=check_file_duplicate | status=unique")
+# return False,None
+
