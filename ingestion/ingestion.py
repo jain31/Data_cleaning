@@ -261,3 +261,42 @@ print(ROOT_DIR)
 # log.info("action=check_file_duplicate | status=unique")
 # return False,None
 
+def _check_incremental_rows(df: pd.DataFrame, conn) -> pd.DataFrame:
+    incoming_ids = df["order_id"].dropna().unique().tolist()
+ 
+    if not incoming_ids:
+       log.warning("action=check_increment_rows | statu=empty | no_order_idea_found")
+       return df.iloc[0:0]   # empty df, same columns, no rows
+ 
+    # build a placeholder string for the SQL IN clause -- one %s per id
+    placeholders = ", ".join(["%s"] * len(incoming_ids))
+ 
+    sql = f"""
+        SELECT order_id FROM orders_clean
+        WHERE order_id IN ({placeholders})
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql, incoming_ids)
+        existing_ids= {row[0] for row in cur.fetchall()}
+        
+    incremental_df = df[~df["order_id"].isin(existing_ids)].copy()
+
+    log.info(
+        f"action=check_increment_rows"
+        f"| incoming={len(df)} | already_loaded={len(existing_ids)}"
+        f"| new_rows={len(incremental_df)}"
+    )
+    return incremental_df
+
+#step5
+def _archive_file(file_path: Path,is_duplicate: bool)-> Path:
+    today = datetime.now().strftime("%y%m%d")
+    dest_dir = (ARCHIVE_DUPLICATE_DIR if is_duplicate else ARCHIVE_DIR) / today
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = dest_dir/file_path.name
+    file_path.rename(dest_path)
+    lod.info(
+        f"action=archive_file | file={file_path.name}"
+        f"| is_duplicate={is_duplicate} | dest={dest_path}"
+    )
+    return dest_path
