@@ -85,9 +85,3 @@ def clean_date(df, original_df):
 
     return clean_df, failed_indexes
 
-import logging
-import multiprocessing
-
-logger = multiprocessing.get_logger()
-logger.setLevel(logging.INFO)
-multiprocessing.log_to_stderr()  # This forces logs to print to your terminal
